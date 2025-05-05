@@ -5,7 +5,7 @@ import {
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -106,7 +106,9 @@ function useHydrated() {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
-	const formId = 'note-editor'
+	const formId = useId()
+	const titleId = useId()
+	const contentId = useId()
 	const isSubmitting = useIsSubmitting()
 
 	const fieldErrors =
@@ -125,14 +127,9 @@ export default function NoteEdit() {
 			>
 				<div className="flex flex-col gap-1">
 					<div>
-						{/* 🐨 add an htmlFor attribute here */}
-						<Label>Title</Label>
+						<Label htmlFor={titleId}>Title</Label>
 						<Input
-							// 🐨 add an id attribute here (it should match what you set to htmlFor on the label)
-							// 🦉 the actual value itself doesn't matter, but it should be unique on the page
-							// and it should match the label's htmlFor.
-
-							// 💯 for extra credit, generate the id using React's useId() hook
+							id={titleId}
 							name="title"
 							defaultValue={data.note.title}
 							required
@@ -143,10 +140,9 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						{/* 🐨 add an htmlFor attribute here */}
-						<Label>Content</Label>
+						<Label htmlFor={contentId}>Content</Label>
 						<Textarea
-							// 🐨 add an id attribute here (it should match what you set to htmlFor on the label)
+							id={contentId}
 							name="content"
 							defaultValue={data.note.content}
 							required
@@ -160,12 +156,7 @@ export default function NoteEdit() {
 				<ErrorList errors={formErrors} />
 			</Form>
 			<div className={floatingToolbarClassName}>
-				<Button
-					// 🐨 add a form prop here and set it to the formId to associate this
-					// button with the form above.
-					variant="destructive"
-					type="reset"
-				>
+				<Button form={formId} variant="destructive" type="reset">
 					Reset
 				</Button>
 				<StatusButton
