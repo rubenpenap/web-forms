@@ -1,3 +1,4 @@
+import { parse } from '@conform-to/zod'
 import {
 	json,
 	redirect,
@@ -41,8 +42,8 @@ const titleMaxLength = 100
 const contentMaxLength = 10000
 
 const NoteEditorSchema = z.object({
-	title: z.string().max(titleMaxLength),
-	content: z.string().max(contentMaxLength),
+	title: z.string().min(1).max(titleMaxLength),
+	content: z.string().min(1).max(contentMaxLength),
 })
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -50,27 +51,17 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	const formData = await request.formData()
 
-	// 🐨 swap this for parse from conform, passing the formData as the first argument
-	// 🐨 For the options, provide NoteEditorSchema as the "schema"
-	// 🦉 it's common convention to call the variable assigned to the parse call "submission"
-	const result = NoteEditorSchema.safeParse({
-		title: formData.get('title'),
-		content: formData.get('content'),
+	const submission = parse(formData, {
+		schema: NoteEditorSchema,
 	})
 
-	// instead of result.success, we can use submission.value. If there's no submission.value,
-	// then there will be errors.
-	// 🐨 replace "!result.success" with "!submission.value"
-	if (!result.success) {
-		// instead of sending back "errors," we want to send back the entire "submission"
-		// 🐨 replace "errors: result.error.flatten()" with "submission"
-		return json({ status: 'error', errors: result.error.flatten() } as const, {
+	if (!submission.value) {
+		return json({ status: 'error', submission } as const, {
 			status: 400,
 		})
 	}
-	// if there were no errors, we can get the (typesafe!! 🦺) values from submission.value
-	// 🐨 replace "result.data" with "submission.value"
-	const { title, content } = result.data
+
+	const { title, content } = submission.value
 
 	await updateNote({ id: params.noteId, title, content })
 
@@ -108,13 +99,10 @@ export default function NoteEdit() {
 	const formId = 'note-editor'
 	const isSubmitting = useIsSubmitting()
 
-	// 🐨 instead of actionData.errors.fieldErrors, we'll use actionData.submission.error
 	const fieldErrors =
-		actionData?.status === 'error' ? actionData.errors.fieldErrors : null
-	// 🐨 instead of actionData.errors.formErrors, we'll use actionData.submission.error['']
-	// (Yeah, it's weird and will change... https://github.com/edmundhung/conform/issues/211)
+		actionData?.status === 'error' ? actionData.submission.error : null
 	const formErrors =
-		actionData?.status === 'error' ? actionData.errors.formErrors : null
+		actionData?.status === 'error' ? actionData.submission.error[''] : null
 	const isHydrated = useHydrated()
 
 	const formHasErrors = Boolean(formErrors?.length)
