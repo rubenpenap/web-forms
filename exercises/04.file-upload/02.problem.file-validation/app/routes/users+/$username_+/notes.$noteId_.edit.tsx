@@ -49,8 +49,11 @@ const MAX_UPLOAD_SIZE = 1024 * 1024 * 3 // 3MB
 const NoteEditorSchema = z.object({
 	title: z.string().max(titleMaxLength),
 	content: z.string().max(contentMaxLength),
-	// 🐨 add imageId, file, and altText fields here (they should all be optional)
-	// 🐨 make sure the file is no larger than the MAX_UPLOAD_SIZE
+	imageId: z.string().optional(),
+	altText: z.string().optional(),
+	file: z
+		.instanceof(File)
+		.refine(file => file.size <= MAX_UPLOAD_SIZE, 'File is too large'),
 })
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -70,8 +73,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			status: 400,
 		})
 	}
-	// 🐨 get the imageId, file, and altText from the submission
-	const { title, content } = submission.value
+
+	const { title, content, imageId, file, altText } = submission.value
 
 	await updateNote({
 		id: params.noteId,
@@ -79,13 +82,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		content,
 		images: [
 			{
-				// 🐨 replace these with what we get from the submission:
-				// @ts-expect-error 🦺 we'll fix this in the next exercise
-				id: formData.get('imageId'),
-				// @ts-expect-error 🦺 we'll fix this in the next exercise
-				file: formData.get('file'),
-				// @ts-expect-error 🦺 we'll fix this in the next exercise
-				altText: formData.get('altText'),
+				id: imageId,
+				file,
+				altText,
 			},
 		],
 	})
