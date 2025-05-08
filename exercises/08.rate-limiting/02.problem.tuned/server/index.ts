@@ -75,20 +75,35 @@ app.use(morgan('tiny'))
 // rate limiting because playwright tests are very fast and we don't want to
 // have to wait for the rate limit to reset between tests.
 const limitMultiple = process.env.TESTING ? 10_000 : 1
+const rateLimitDefault = {
+	windowMs: 60 * 1000,
+	limit: 1000 * limitMultiple,
+	standardHeaders: true,
+	legacyHeaders: false,
+}
 
-// 🐨 create and apply three rate limit middlewares
-// - strongestRateLimit with 10 per minute. Applies to non-GET requests to /signup
-// - strongRateLimit with 100 per minute. Applies to other non-GET requests
-// - generalRateLimit with 1000 per minute. Applies to everything else.
+const strongestRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 10 * limitMultiple,
+})
 
-app.use(
-	rateLimit({
-		windowMs: 60 * 1000,
-		limit: 1000 * limitMultiple,
-		standardHeaders: true,
-		legacyHeaders: false,
-	}),
-)
+const strongRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 100 * limitMultiple,
+})
+
+const generalRateLimit = rateLimit(rateLimitDefault)
+app.use((req, res, next) => {
+	const strongPaths = ['/signup']
+	if (req.method !== 'GET' && req.method !== 'HEAD') {
+		if (strongPaths.some(p => req.path.includes(p))) {
+			return strongestRateLimit(req, res, next)
+		}
+		return strongRateLimit(req, res, next)
+	}
+
+	return generalRateLimit(req, res, next)
+})
 
 app.all(
 	'*',
@@ -109,8 +124,8 @@ const server = app.listen(portToUse, () => {
 		desiredPort === portToUse
 			? desiredPort
 			: addy && typeof addy === 'object'
-			? addy.port
-			: 0
+				? addy.port
+				: 0
 
 	if (portUsed !== desiredPort) {
 		console.warn(
