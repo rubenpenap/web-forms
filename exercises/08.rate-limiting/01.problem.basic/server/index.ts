@@ -7,6 +7,7 @@ import chalk from 'chalk'
 import closeWithGrace from 'close-with-grace'
 import compression from 'compression'
 import express from 'express'
+import { rateLimit } from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
 import morgan from 'morgan'
 
@@ -70,13 +71,16 @@ app.use(express.static('public', { maxAge: '1h' }))
 morgan.token('url', req => decodeURIComponent(req.url ?? ''))
 app.use(morgan('tiny'))
 
-// 🐨 add the rate limiter here. It should have:
-// - windowMs of 60 * 1000 (1 minute)
-// - max of 1000
-// - standardHeaders: true
-// - legacyHeaders: false
-// 💯 as extra credit, make it so when process.env.TESTING is defined, we
-// properly configure the rate limiter to allow for more requests per minute.
+const maxMultiple = process.env.TESTING ? 10_000 : 1
+
+app.use(
+	rateLimit({
+		windowMs: 60 * 1000,
+		max: 1000 * maxMultiple,
+		standardHeaders: true,
+		legacyHeaders: false,
+	}),
+)
 
 app.all(
 	'*',
@@ -97,8 +101,8 @@ const server = app.listen(portToUse, () => {
 		desiredPort === portToUse
 			? desiredPort
 			: addy && typeof addy === 'object'
-			? addy.port
-			: 0
+				? addy.port
+				: 0
 
 	if (portUsed !== desiredPort) {
 		console.warn(
