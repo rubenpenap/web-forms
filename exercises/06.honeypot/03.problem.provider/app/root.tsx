@@ -12,12 +12,14 @@ import {
 	useLoaderData,
 	type MetaFunction,
 } from '@remix-run/react'
+import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { EpicShop } from './epicshop.tsx'
 import fontStylestylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 import { getEnv } from './utils/env.server.ts'
+import { honeypot } from './utils/honeypot.server.ts'
 
 export const links: LinksFunction = () => {
 	return [
@@ -29,9 +31,8 @@ export const links: LinksFunction = () => {
 }
 
 export async function loader() {
-	// 🐨 get the honeypot props from the honeypot object and add them to this
-	// object.
-	return json({ username: os.userInfo().username, ENV: getEnv() })
+	const honeyProps = honeypot.getInputProps()
+	return json({ username: os.userInfo().username, ENV: getEnv(), honeyProps })
 }
 
 function Document({ children }: { children: React.ReactNode }) {
@@ -92,9 +93,12 @@ function App() {
 }
 
 export default function AppWithProviders() {
-	// 💰 you'll need this const data = useLoaderData<typeof loader>()
-	// 🐨 render the HoneypotProvider here and pass the honeypot props
-	return <App />
+	const data = useLoaderData<typeof loader>()
+	return (
+		<HoneypotProvider {...data.honeyProps}>
+			<App />
+		</HoneypotProvider>
+	)
 }
 
 export const meta: MetaFunction = () => {
