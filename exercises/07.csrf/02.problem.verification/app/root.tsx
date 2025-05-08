@@ -16,6 +16,7 @@ import {
 	useLoaderData,
 	type MetaFunction,
 } from '@remix-run/react'
+import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
@@ -46,7 +47,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	)
 }
 
-function Document({ children }: { children: React.ReactNode }) {
+function Document({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
 		<html lang="en" className="h-full overflow-x-hidden">
 			<head>
@@ -105,12 +106,12 @@ function App() {
 
 export default function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
-	// 🐨 wrap this in the AuthenticityTokenProvider and pass the csrfToken as
-	// the "token" prop.
 	return (
-		<HoneypotProvider {...data.honeyProps}>
-			<App />
-		</HoneypotProvider>
+		<AuthenticityTokenProvider token={data.csrfToken}>
+			<HoneypotProvider {...data.honeyProps}>
+				<App />
+			</HoneypotProvider>
+		</AuthenticityTokenProvider>
 	)
 }
 
